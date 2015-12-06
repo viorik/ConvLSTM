@@ -11,7 +11,7 @@ require 'nn'
 require 'dpnn'
 require 'rnn'
 require 'extracunn'
---require 'recursiveUtils'
+
 local ConvLSTM, parent = torch.class('nn.ConvLSTM', 'nn.AbstractRecurrent')
 
 function ConvLSTM:__init(inputSize, outputSize, rho, kc, km, stride)

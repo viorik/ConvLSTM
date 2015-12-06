@@ -1,5 +1,5 @@
 require 'nn'
-require 'robustutils'
+require 'extracunn'
 
 --[[
   This module does not modify its input, it only adds gradient in backprop to penalise for non-smoothness

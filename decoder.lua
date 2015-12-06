@@ -1,5 +1,4 @@
 require 'nn'
-require 'SpatialUnPooling'
 
 -- Decoder, mirror of the encoder, but no non-linearity
 -- first layer 
