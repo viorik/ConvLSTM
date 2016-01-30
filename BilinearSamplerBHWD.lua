@@ -1,4 +1,7 @@
-local BilinearSamplerBHWD, parent = torch.class('nn.BilinearSamplerBHWD', 'nn.Module')
+assert(nn.BilinearSamplerBHWD, "stnbhwd package not preloaded")
+
+-- we overwrite the module of the same name found in the stnbhwd package
+local BilinearSamplerBHWD, parent = nn.BilinearSamplerBHWD, nn.Module
 
 --[[
    BilinearSamplerBHWD() :

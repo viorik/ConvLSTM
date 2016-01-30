@@ -12,29 +12,15 @@ require 'dpnn'
 require 'rnn'
 require 'extracunn'
 
-local ConvLSTM, parent = torch.class('nn.ConvLSTM', 'nn.AbstractRecurrent')
+local ConvLSTM, parent = torch.class('nn.ConvLSTM', 'nn.LSTM')
 
 function ConvLSTM:__init(inputSize, outputSize, rho, kc, km, stride)
-   parent.__init(self, rho or 10)
-   self.inputSize = inputSize
-   self.outputSize = outputSize
    self.kc = kc
    self.km = km
    self.padc = torch.floor(kc/2)
    self.padm = torch.floor(km/2)
    self.stride = stride or 1
-   
-   -- build the model
-   self.recurrentModule = self:buildModel()
-   -- make it work with nn.Container
-   self.modules[1] = self.recurrentModule
-   self.sharedClones[1] = self.recurrentModule 
-   
-   -- for output(0), cell(0) and gradCell(T)
-   self.zeroTensor = torch.Tensor() 
-   
-   self.cells = {}
-   self.gradCells = {}
+   parent.__init(self, inputSize, outputSize, rho or 10)
 end
 
 -------------------------- factory methods -----------------------------
@@ -137,174 +123,6 @@ function ConvLSTM:buildModel()
    concat4:add(output):add(nn.SelectTable(3))
    model:add(concat4)
    return model
-end
-
-------------------------- forward backward -----------------------------
-function ConvLSTM:updateOutput(input)
-   local prevOutput, prevCell
-   
-   if self.step == 1 then
-      prevOutput = self.userPrevOutput or self.zeroTensor
-      prevCell = self.userPrevCell or self.zeroTensor
-      self.zeroTensor:resize(self.outputSize,input:size(2),input:size(3)):zero()
-   else
-      -- previous output and memory of this module
-      prevOutput = self.output
-      prevCell   = self.cell
-   end
-      
-   -- output(t), cell(t) = lstm{input(t), output(t-1), cell(t-1)}
-   local output, cell
-   if self.train ~= false then
-      self:recycle()
-      local recurrentModule = self:getStepModule(self.step)
-      -- the actual forward propagation
-      output, cell = unpack(recurrentModule:updateOutput{input, prevOutput, prevCell})
-   else
-      output, cell = unpack(self.recurrentModule:updateOutput{input, prevOutput, prevCell})
-   end
-   
-   if self.train ~= false then
-      local input_ = self.inputs[self.step]
-      self.inputs[self.step] = self.copyInputs 
-         and nn.rnn.recursiveCopy(input_, input) 
-         or nn.rnn.recursiveSet(input_, input)     
-   end
-   
-   self.outputs[self.step] = output
-   self.cells[self.step] = cell
-   
-   self.output = output
-   self.cell = cell
-   
-   self.step = self.step + 1
-   self.gradPrevOutput = nil
-   self.updateGradInputStep = nil
-   self.accGradParametersStep = nil
-   self.gradParametersAccumulated = false
-   -- note that we don't return the cell, just the output
-   return self.output
-end
-
-function ConvLSTM:backwardThroughTime(timeStep, rho)
-   assert(self.step > 1, "expecting at least one updateOutput")
-   self.gradInputs = {} -- used by Sequencer, Repeater
-   timeStep = timeStep or self.step
-   local rho = math.min(rho or self.rho, timeStep-1)
-   local stop = timeStep - rho
-   
-   if self.fastBackward then
-      for step=timeStep-1,math.max(stop,1),-1 do
-         -- set the output/gradOutput states of current Module
-         local recurrentModule = self:getStepModule(step)
-         
-         -- backward propagate through this step
-         local gradOutput = self.gradOutputs[step]
-         if self.gradPrevOutput then
-            self._gradOutputs[step] = nn.rnn.recursiveCopy(self._gradOutputs[step], self.gradPrevOutput)
-            nn.rnn.recursiveAdd(self._gradOutputs[step], gradOutput)
-            gradOutput = self._gradOutputs[step]
-         end
-         
-         local scale = self.scales[step]
-         local output = (step == 1) and (self.userPrevOutput or self.zeroTensor) or self.outputs[step-1]
-         local cell = (step == 1) and (self.userPrevCell or self.zeroTensor) or self.cells[step-1]
-         local inputTable = {self.inputs[step], output, cell}
-         local gradCell = (step == self.step-1) and (self.userNextGradCell or self.zeroTensor) or self.gradCells[step]
-         local gradInputTable = recurrentModule:backward(inputTable, {gradOutput, gradCell}, scale)
-         gradInput, self.gradPrevOutput, gradCell = unpack(gradInputTable)
-         self.gradCells[step-1] = gradCell
-         table.insert(self.gradInputs, 1, gradInput)
-         if self.userPrevOutput then self.userGradPrevOutput = self.gradPrevOutput end
-      end
-      self.gradParametersAccumulated = true
-      return gradInput
-   else
-      local gradInput = self:updateGradInputThroughTime()
-      self:accGradParametersThroughTime()
-      return gradInput
-   end
-end
-
-function ConvLSTM:updateGradInputThroughTime(timeStep, rho)
-   assert(self.step > 1, "expecting at least one updateOutput")
-   self.gradInputs = {}
-   local gradInput
-   timeStep = timeStep or self.step
-   local rho = math.min(rho or self.rho, timeStep-1)
-   local stop = timeStep - rho
-
-   for step=timeStep-1,math.max(stop,1),-1 do
-      -- set the output/gradOutput states of current Module
-      local recurrentModule = self:getStepModule(step)
-      
-      -- backward propagate through this step
-      local gradOutput = self.gradOutputs[step]
-      if self.gradPrevOutput then
-         self._gradOutputs[step] = nn.rnn.recursiveCopy(self._gradOutputs[step], self.gradPrevOutput)
-         nn.rnn.recursiveAdd(self._gradOutputs[step], gradOutput)
-         gradOutput = self._gradOutputs[step]
-      end
-      
-      local output = (step == 1) and (self.userPrevOutput or self.zeroTensor) or self.outputs[step-1]
-      local cell = (step == 1) and (self.userPrevCell or self.zeroTensor) or self.cells[step-1]
-      local inputTable = {self.inputs[step], output, cell}
-      local gradCell = (step == self.step-1) and (self.userNextGradCell or self.zeroTensor) or self.gradCells[step]
-      local gradInputTable = recurrentModule:updateGradInput(inputTable, {gradOutput, gradCell})
-      gradInput, self.gradPrevOutput, gradCell = unpack(gradInputTable)
-      self.gradCells[step-1] = gradCell
-      table.insert(self.gradInputs, 1, gradInput)
-      if self.userPrevOutput then self.userGradPrevOutput = self.gradPrevOutput end
-   end
-   
-   return gradInput
-end
-
-function ConvLSTM:accGradParametersThroughTime(timeStep, rho)
-   timeStep = timeStep or self.step
-   local rho = math.min(rho or self.rho, timeStep-1)
-   local stop = timeStep - rho
-   
-   for step=timeStep-1,math.max(stop,1),-1 do
-      -- set the output/gradOutput states of current Module
-      local recurrentModule = self:getStepModule(step)
-      
-      -- backward propagate through this step
-      local scale = self.scales[step]
-      local output = (step == 1) and (self.userPrevOutput or self.zeroTensor) or self.outputs[step-1]
-      local cell = (step == 1) and (self.userPrevCell or self.zeroTensor) or self.cells[step-1]
-      local inputTable = {self.inputs[step], output, cell}
-      local gradOutput = (step == self.step-1) and self.gradOutputs[step] or self._gradOutputs[step]
-      local gradCell = (step == self.step-1) and (self.userNextGradCell or self.zeroTensor) or self.gradCells[step]
-      local gradOutputTable = {gradOutput, gradCell}
-      recurrentModule:accGradParameters(inputTable, gradOutputTable, scale)
-   end
-   
-   self.gradParametersAccumulated = true
-   return gradInput
-end
-
-function ConvLSTM:accUpdateGradParametersThroughTime(lr, timeStep, rho)
-   timeStep = timeStep or self.step
-   local rho = math.min(rho or self.rho, timeStep-1)
-   local stop = timeStep - rho
-   
-   for step=timeStep-1,math.max(stop,1),-1 do
-      -- set the output/gradOutput states of current Module
-      local recurrentModule = self:getStepModule(step)
-      
-      -- backward propagate through this step
-      local scale = self.scales[step] 
-      local output = (step == 1) and (self.userPrevOutput or self.zeroTensor) or self.outputs[step-1]
-      local cell = (step == 1) and (self.userPrevCell or self.zeroTensor) or self.cells[step-1]
-      local inputTable = {self.inputs[step], output, cell}
-      local gradOutput = (step == self.step-1) and self.gradOutputs[step] or self._gradOutputs[step]
-      local gradCell = (step == self.step-1) and (self.userNextGradCell or self.zeroTensor) or self.gradCells[step]
-      local gradOutputTable = {self.gradOutputs[step], gradCell}
-      recurrentModule:accUpdateGradParameters(inputTable, gradOutputTable, lr*scale)
-   end
-   
-   return gradInput
 end
 
 
