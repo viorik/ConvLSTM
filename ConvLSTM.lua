@@ -125,6 +125,44 @@ function ConvLSTM:buildModel()
    return model
 end
 
+function ConvLSTM:updateOutput(input)
+   local prevOutput, prevCell
+   
+   if self.step == 1 then
+      prevOutput = self.userPrevOutput or self.zeroTensor
+      prevCell = self.userPrevCell or self.zeroTensor
+      self.zeroTensor:resize(self.outputSize,input:size(2),input:size(3)):zero()
+   else
+      -- previous output and memory of this module
+      prevOutput = self.output
+      prevCell   = self.cell
+   end
+      
+   -- output(t), cell(t) = lstm{input(t), output(t-1), cell(t-1)}
+   local output, cell
+   if self.train ~= false then
+      self:recycle()
+      local recurrentModule = self:getStepModule(self.step)
+      -- the actual forward propagation
+      output, cell = unpack(recurrentModule:updateOutput{input, prevOutput, prevCell})
+   else
+      output, cell = unpack(self.recurrentModule:updateOutput{input, prevOutput, prevCell})
+   end
+   
+   self.outputs[self.step] = output
+   self.cells[self.step] = cell
+   
+   self.output = output
+   self.cell = cell
+   
+   self.step = self.step + 1
+   self.gradPrevOutput = nil
+   self.updateGradInputStep = nil
+   self.accGradParametersStep = nil
+   self.gradParametersAccumulated = false
+   -- note that we don't return the cell, just the output
+   return self.output
+end
 
 function ConvLSTM:initBias(forgetBias, otherBias)
   local fBias = forgetBias or 1
