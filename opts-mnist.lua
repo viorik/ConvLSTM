@@ -27,7 +27,7 @@ opt.constrWeight = {0,1,0.001}
 opt.memorySizeW = 32
 opt.memorySizeH = 32
 
-opt.dataFile = 'dataset_fly_64x64_lines_train.t7'
+opt.dataFile = '/mnt/disk/ankur/Viorica/data/mnist/dataset_fly_64x64_lines_train.t7'
 opt.statInterval = 50 -- interval for printing error
 opt.v            = false  -- be verbose
 opt.display      = true -- display stuff
