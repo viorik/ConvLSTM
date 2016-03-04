@@ -14,12 +14,13 @@ require 'extracunn'
 
 local ConvLSTM, parent = torch.class('nn.ConvLSTM', 'nn.LSTM')
 
-function ConvLSTM:__init(inputSize, outputSize, rho, kc, km, stride)
+function ConvLSTM:__init(inputSize, outputSize, rho, kc, km, stride, batchSize)
    self.kc = kc
    self.km = km
    self.padc = torch.floor(kc/2)
    self.padm = torch.floor(km/2)
    self.stride = stride or 1
+   self.batchSize = batchSize or nil
    parent.__init(self, inputSize, outputSize, rho or 10)
 end
 
@@ -131,7 +132,11 @@ function ConvLSTM:updateOutput(input)
    if self.step == 1 then
       prevOutput = self.userPrevOutput or self.zeroTensor
       prevCell = self.userPrevCell or self.zeroTensor
-      self.zeroTensor:resize(self.outputSize,input:size(2),input:size(3)):zero()
+      if self.batchSize then
+         self.zeroTensor:resize(self.batchSize,self.outputSize,input:size(3),input:size(4)):zero()
+      else
+         self.zeroTensor:resize(self.outputSize,input:size(2),input:size(3)):zero()
+      end
    else
       -- previous output and memory of this module
       prevOutput = self.output
