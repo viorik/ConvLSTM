@@ -1,10 +1,9 @@
 local data_verbose = false
 
 function getdataSeq_mnist(datafile)
-   local data = torch.DiskFile(datafile,'r'):readObject()
+   local data = torch.load(datafile)
    local datasetSeq ={}
    data = data:float()/255.0
---   local std = std or 0.2
    local nsamples = data:size(1)
    local nseq  = data:size(2)
    local nrows = data:size(4)
