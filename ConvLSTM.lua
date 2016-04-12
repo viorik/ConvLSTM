@@ -173,11 +173,7 @@ function ConvLSTM:initBias(forgetBias, otherBias)
   local fBias = forgetBias or 1
   local oBias = otherBias or 0
   self.inputGate.modules[2].modules[1].bias:fill(oBias)
-  --self.inputGate.modules[2].modules[2].bias:fill(oBias)
   self.outputGate.modules[2].modules[1].bias:fill(oBias)
-  --self.outputGate.modules[2].modules[2].bias:fill(oBias)
   self.cellGate.modules[2].modules[1].bias:fill(oBias)
-  --self.cellGate.modules[2].modules[2].bias:fill(oBias)
   self.forgetGate.modules[2].modules[1].bias:fill(fBias)
-  --self.forgetGate.modules[2].modules[2].bias:fill(fBias)
 end
