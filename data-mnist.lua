@@ -1,7 +1,8 @@
 local data_verbose = false
 
 function getdataSeq_mnist(datafile)
-   local data = torch.load(datafile)
+   --local data = torch.load(datafile) -- uncomment this line if dataset in binary format
+   local data = torch.DiskFile(datafile,'r'):readObject() -- uncomment this line if dataset in ascii format
    local datasetSeq ={}
    data = data:float()/255.0
    local nsamples = data:size(1)
