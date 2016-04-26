@@ -28,12 +28,13 @@ opt.memorySizeW = 32
 opt.memorySizeH = 32
 
 opt.dataFile = 'dataset_fly_64x64_lines_train.t7'
+opt.dataFileTest = 'dataset_fly_64x64_lines_test.t7'
 opt.statInterval = 50 -- interval for printing error
 opt.v            = false  -- be verbose
 opt.display      = true -- display stuff
-opt.displayInterval = opt.statInterval*10
+opt.displayInterval = opt.statInterval
 opt.save         = true -- save models
-
+opt.saveInterval = 10000
 
 if not paths.dirp(opt.dir) then
    os.execute('mkdir -p ' .. opt.dir)

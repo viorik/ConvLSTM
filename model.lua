@@ -1,6 +1,6 @@
 require 'nn'
 require 'rnn'
-require 'ConvLSTM'
+require 'UntiedConvLSTM'
 require 'DenseTransformer2D'
 require 'SmoothHuberPenalty'
 require 'encoder'
@@ -18,13 +18,12 @@ model:add(seqe)
 
 -- memory branch
 local memory_branch = nn.Sequential()
-local seq = nn.Sequencer(nn.ConvLSTM(opt.nFiltersMemory[1],opt.nFiltersMemory[2], opt.nSeq, opt.kernelSize, opt.kernelSizeMemory, opt.stride))
+--local seq = nn.Sequencer(nn.ConvLSTM(opt.nFiltersMemory[1],opt.nFiltersMemory[2], opt.nSeq, opt.kernelSize, opt.kernelSizeMemory, opt.stride))
+local seq = nn.Sequencer(nn.UntiedConvLSTM(opt.nFiltersMemory[1],opt.nFiltersMemory[2], opt.nSeq, opt.kernelSize, opt.kernelSizeMemory, opt.stride))
 seq:remember('both')
 seq:training()
 memory_branch:add(seq)
 memory_branch:add(nn.SelectTable(opt.nSeq))
---memory_branch:add(nn.SelectTable(opt.nSeq))
---memory_branch:add(nn.L1Penalty(opt.constrWeight[2]))
 memory_branch:add(flow)
 
 -- keep last frame to apply optical flow on

@@ -1,10 +1,8 @@
-local data_verbose = false
-
 function getdataSeq_mnist(datafile)
-   local data = torch.DiskFile(datafile,'r'):readObject()
+   --local data = torch.load(datafile) -- uncomment this line if dataset in binary format
+   local data = torch.DiskFile(datafile,'r'):readObject() -- uncomment this line if dataset in ascii format
    local datasetSeq ={}
    data = data:float()/255.0
---   local std = std or 0.2
    local nsamples = data:size(1)
    local nseq  = data:size(2)
    local nrows = data:size(4)
@@ -14,18 +12,18 @@ function getdataSeq_mnist(datafile)
       return nsamples
    end
 
+   local idx = 1
+   local shuffle = torch.randperm(nsamples)
    function datasetSeq:selectSeq()
-      local imageok = false
-      if simdata_verbose then
-         print('selectSeq')
+      if idx>nsamples then
+        shuffle = torch.randperm(nsamples)
+        idx = 1
+        print ('data: Shuffle the data')
       end
-      while not imageok do
-         local i = math.ceil(torch.uniform(1e-12,nsamples))
-         --image index
-                 
-         local im = data:select(1,i)
-         return im,i
-      end
+      local i = shuffle[idx]
+      local seq = data:select(1,i)
+      idx = idx + 1
+      return seq,i
    end
 
    dsample = torch.Tensor(nseq,1,nrows,ncols)
