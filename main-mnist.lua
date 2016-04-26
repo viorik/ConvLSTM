@@ -1,3 +1,5 @@
+unpack = unpack or table.unpack
+
 require 'nn'
 require 'cunn'
 require 'paths'
@@ -5,6 +7,7 @@ require 'torch'
 require 'cutorch'
 require 'image'
 require 'stn'
+require 'BilinearSamplerBHWD'
 require 'optim'
 require 'ConvLSTM'
 require 'display_flow'
@@ -45,6 +48,8 @@ local function main()
   local err = 0
   local iter = 0
   local epoch = 0
+
+  rmspropconf = {learningRate = eta}
   
   model:training()
 
@@ -93,12 +98,9 @@ local function main()
    
     if math.fmod(t,20000) == 0 then
       epoch = epoch + 1
-      eta = opt.eta*math.pow(0.5,epoch/50)    
+      eta = opt.eta*math.pow(0.5,epoch/50)  
+      rmspropconf.learningRate = eta  
     end  
-
-    rmspropconf = {learningRate = eta,
-                  epsilon = 1e-5,
-                  alpha = 0.9}
 
     _,fs = optim.rmsprop(feval, parameters, rmspropconf)
 
