@@ -115,7 +115,7 @@ local function main()
         err = 0
       end
       if opt.save and math.fmod(t , opt.saveInterval) == 0 then
-        model.cleanState()      
+        model:clearState()      
         torch.save(opt.dir .. '/model_' .. t .. '.bin', model)
         config = {eta = eta, epsilon = epsilon, alpha = alpha, iter = iter, epoch = epoch}
         torch.save(opt.dir .. '/config_' .. t .. '.bin', config)
