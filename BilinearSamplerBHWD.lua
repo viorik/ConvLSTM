@@ -71,7 +71,7 @@ function BilinearSamplerBHWD:updateOutput(input)
 
    self.output:resize(inputImages:size(1), grids:size(2), grids:size(3), inputImages:size(4))	
 
-	inputImages.nn.BilinearSamplerBHWD_updateOutput(self, inputImages, grids)
+	inputImages.nn.BilinearSamplerBHWD_updateOutput(self, inputImages, grids, self.output)
 
    if _inputImages:nDimension()==3 then
       self.output=self.output:select(1,1)
