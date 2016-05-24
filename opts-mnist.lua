@@ -9,7 +9,7 @@ opt.inputSizeH = 64   -- width of each input patch or image
 opt.eta       = 1e-4 -- learning rate
 opt.etaDecay  = 1e-5 -- learning rate decay
 opt.momentum  = 0.9  -- gradient momentum
-opt.maxIter   = 1000000 --max number of updates
+opt.maxIter   = 30000 --max number of updates
 opt.nSeq      = 19
 opt.transf    = 2       -- number of parameters for transformation; 6 for affine or 3 for 2D transformation
 opt.nFilters  = {1,32}--9,45} -- number of filters in the encoding/decoding layers
@@ -29,6 +29,8 @@ opt.memorySizeH = 32
 
 opt.dataFile = 'dataset_fly_64x64_lines_train.t7'
 opt.dataFileTest = 'dataset_fly_64x64_lines_test.t7'
+opt.modelFile = nil
+opt.configFile = nil
 opt.statInterval = 50 -- interval for printing error
 opt.v            = false  -- be verbose
 opt.display      = true -- display stuff

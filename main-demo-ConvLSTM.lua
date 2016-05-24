@@ -114,12 +114,6 @@ local function main()
         print('==> iteration = ' .. t .. ', average loss = ' .. err/(opt.nSeq) .. ' lr '..eta ) -- err/opt.statInterval)
         err = 0
       end
-      if opt.save and math.fmod(t , opt.saveInterval) == 0 then
-        model:clearState()      
-        torch.save(opt.dir .. '/model_' .. t .. '.bin', model)
-        config = {eta = eta, epsilon = epsilon, alpha = alpha, iter = iter, epoch = epoch}
-        torch.save(opt.dir .. '/config_' .. t .. '.bin', config)
-      end
       
       if opt.display and math.fmod(t , opt.displayInterval) == 0 then
         _imInput_ = image.display{image=inputTable,win = _imInput_, legend = 'Input Sequence', nrow = #inputTable}
@@ -127,10 +121,17 @@ local function main()
         _imTarget_ = image.display{image=targetTable,win = _imTarget_, legend = 'Target Frames', nrow = #targetTable}
         _imOutput_ = image.display{image=output,win = _imOutput_, legend = 'Output', nrow = #output}
       end  
+      if opt.save and math.fmod(t , opt.saveInterval) == 0 then
+        model:clearState()      
+        torch.save(opt.dir .. '/model_' .. t .. '.bin', model)
+        config = {eta = eta, epsilon = epsilon, alpha = alpha, iter = iter, epoch = epoch}
+        torch.save(opt.dir .. '/config_' .. t .. '.bin', config)
+      end
     end
+    print ('Training done')
+    collectgarbage()
   end
-  print ('Training done')
-  collectgarbage()
+  
 
   -------------------------------------------------------------------------
   -- Evaluation mode 
@@ -146,29 +147,30 @@ local function main()
   for t = 1,testSamples do
     local f = 0
     inputTable = {}
-    target  = torch.Tensor()
+    targetTable = {}
     sample = dataset[t]
     data = sample[1]
     for i = 1,data:size(1)-1 do
       table.insert(inputTable, data[i]:cuda())
     end
-    target:resizeAs(data[1]):copy(data[data:size(1)])
+    for i = 2,data:size(1) do
+      table.insert(targetTable, data[i]:cuda())
+    end
     
-    target = target:cuda()
     output = model:updateOutput(inputTable)
     
-    f = criterion:updateOutput(output,target)
+    f = criterion:updateOutput(output,targetTable)
 
-    print ('Error for image '.. t .. ' '.. f)
+    print ('Error for sequence '.. t .. ' '.. f)
     if opt.display then
-      _imInput_ = image.display{image=inputTable,win = _imInput_, legend = 'Input Sequence'}
-      _imTarget_ = image.display{image=target:squeeze(),win = _imTarget_, legend = 'Target Frame'}
-      _imOutput_ = image.display{image=output:squeeze(),win = _imOutput_, legend = 'Output'}
+      _imInput_ = image.display{image=inputTable,win = _imInput_, legend = 'Input Sequence', nrow = #inputTable}
+      _imTarget_ = image.display{image=targetTable,win = _imTarget_, legend = 'Target Frame', nrow = #targetTable}
+      _imOutput_ = image.display{image=output,win = _imOutput_, legend = 'Output', nrow = #output}
     end 
     err = err + f
   end
   
-  print ('Average error '.. err/t)
+  print ('Average error '.. err/testSamples)
   print ('Quantitative testing done')
   collectgarbage()
 end
