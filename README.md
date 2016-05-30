@@ -1,6 +1,6 @@
 # ConvLSTM
 
-Source code associated with [Spatio-temporal video autoencoder with differentiable memory](http://arxiv.org/abs/1511.06309), to appear in ICLR2016 Workshop track. 
+Source code associated with [Spatio-temporal video autoencoder with differentiable memory](http://arxiv.org/abs/1511.06309), published in ICLR2016 Workshop track. 
 
 This is a demo version to be trained on a modified version of moving MNIST dataset, available [here](http://mi.eng.cam.ac.uk/~vp344/). Some videos obtained on real test sequences are also available [here](http://mi.eng.cam.ac.uk/~vp344/) (not up-to-date though). 
 
