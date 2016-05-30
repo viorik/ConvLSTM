@@ -12,6 +12,16 @@ require 'dpnn'
 require 'rnn'
 require 'extracunn'
 
+local backend_name = 'cudnn'
+
+local backend
+if backend_name == 'cudnn' then
+  require 'cudnn'
+  backend = cudnn
+else
+  backend = nn
+end
+
 local ConvLSTM, parent = torch.class('nn.ConvLSTM', 'nn.LSTM')
 
 function ConvLSTM:__init(inputSize, outputSize, rho, kc, km, stride, batchSize)
@@ -29,13 +39,13 @@ function ConvLSTM:buildGate()
    -- Note : Input is : {input(t), output(t-1), cell(t-1)}
    local gate = nn.Sequential()
    gate:add(nn.NarrowTable(1,2)) -- we don't need cell here
-   local input2gate = nn.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc)
+   local input2gate = backend.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc)
    local output2gate = nn.SpatialConvolutionNoBias(self.outputSize, self.outputSize, self.km, self.km, self.stride, self.stride, self.padm, self.padm)
    local para = nn.ParallelTable()
    para:add(input2gate):add(output2gate) 
    gate:add(para)
    gate:add(nn.CAddTable())
-   gate:add(nn.Sigmoid())
+   gate:add(backend.Sigmoid())
    return gate
 end
 
@@ -53,13 +63,13 @@ function ConvLSTM:buildcellGate()
    -- Input is : {input(t), output(t-1), cell(t-1)}, but we only need {input(t), output(t-1)}
    local hidden = nn.Sequential()
    hidden:add(nn.NarrowTable(1,2))
-   local input2gate = nn.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc)
+   local input2gate = backend.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc)
    local output2gate = nn.SpatialConvolutionNoBias(self.outputSize, self.outputSize, self.km, self.km, self.stride, self.stride, self.padm, self.padm)
    local para = nn.ParallelTable()
    para:add(input2gate):add(output2gate)
    hidden:add(para)
    hidden:add(nn.CAddTable())
-   hidden:add(nn.Tanh())
+   hidden:add(backend.Tanh())
    self.cellGate = hidden
    return hidden
 end
@@ -113,7 +123,7 @@ function ConvLSTM:buildModel()
    model:add(nn.FlattenTable())
    local cellAct = nn.Sequential()
    cellAct:add(nn.SelectTable(3))
-   cellAct:add(nn.Tanh())
+   cellAct:add(backend.Tanh())
    local concat3 = nn.ConcatTable()
    concat3:add(self.outputGate):add(cellAct)
    local output = nn.Sequential()

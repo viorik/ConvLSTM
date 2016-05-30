@@ -10,6 +10,16 @@
 
 require 'ConvLSTM'
 
+local backend_name = 'cudnn'
+
+local backend
+if backend_name == 'cudnn' then
+  require 'cudnn'
+  backend = cudnn
+else
+  backend = nn
+end
+
 local UntiedConvLSTM, parent = torch.class('nn.UntiedConvLSTM', 'nn.ConvLSTM')
 
 function UntiedConvLSTM:__init(inputSize, outputSize, rho, kc, km, stride, batchSize)
@@ -20,15 +30,15 @@ end
 function UntiedConvLSTM:buildGateUntied()
    -- Note : Input is : input(t)
    local gate = nn.Sequential()
-   gate:add(nn.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc))
-   gate:add(nn.Sigmoid())
+   gate:add(backend.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc))
+   gate:add(backend.Sigmoid())
    return gate
 end
 
 function UntiedConvLSTM:buildCellGateUntied()
    local cellGate = nn.Sequential()
-   cellGate:add(nn.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc))
-   cellGate:add(nn.Tanh())
+   cellGate:add(backend.SpatialConvolution(self.inputSize, self.outputSize, self.kc, self.kc, self.stride, self.stride, self.padc, self.padc))
+   cellGate:add(backend.Tanh())
    self.cellGateUntied = cellGate
    return cellGate
 end
@@ -49,7 +59,7 @@ function UntiedConvLSTM:buildModelUntied()
    concat2:add(cellAct):add(nn.SelectTable(3))
    model:add(concat2)
    local tanhcell = nn.Sequential()
-   tanhcell:add(nn.SelectTable(1)):add(nn.Tanh())
+   tanhcell:add(nn.SelectTable(1)):add(backend.Tanh())
    local concat3 = nn.ConcatTable()
    concat3:add(nn.SelectTable(2)):add(tanhcell):add(nn.SelectTable(1))
    model:add(concat3)
