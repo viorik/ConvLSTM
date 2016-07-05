@@ -13,6 +13,17 @@ The ConvLSTM module can be used as is. Optionally, the untied version implemente
 * [extracunn](https://github.com/viorik/extracunn): contains cuda code for SpatialConvolutionalNoBias layer and Huber gradient computation.
 * [stn](https://github.com/qassemoquab/stnbhwd).
 
+To cite our paper/code:
 
+```
+@inproceedings{PatrauceanHC16,
+  author    = {Viorica P{\u a}tr{\u a}ucean and
+               Ankur Handa and
+               Roberto Cipolla},
+  title     = {Spatio-temporal video autoencoder with differentiable memory},
+  booktitle = {International Conference on Learning Representations (ICLR) Workshop},
+  year      = {2016}
+}
+```
  
 
