@@ -25,6 +25,8 @@ end
 local ConvLSTM, parent = torch.class('nn.ConvLSTM', 'nn.LSTM')
 
 function ConvLSTM:__init(inputSize, outputSize, rho, kc, km, stride, batchSize)
+   assert(km % 2 == 1, 'ConvLSTM requires that km MUST be an odd number')
+
    self.kc = kc
    self.km = km
    self.padc = torch.floor(kc/2)
